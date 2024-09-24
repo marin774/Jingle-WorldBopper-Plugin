@@ -1,5 +1,21 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "gradle.plugin.com.github.johnrengelman:shadow:7.1.2"
+    }
+}
+
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+configurations {
+    provided
+    compile.extendsFrom provided
 }
 
 group = project.maven_group
@@ -26,13 +42,18 @@ dependencies {
     // lombok
     compileOnly 'org.projectlombok:lombok:1.18.34'
     annotationProcessor 'org.projectlombok:lombok:1.18.34'
+
+    // Jgoodies (GUI)
+    shadow group: 'com.jgoodies', name: 'jgoodies-forms', version: '1.9.0'
 }
 
 
-processResources {
-    inputs.property "version", project.version
+shadowJar {
+    configurations = [project.configurations.shadow]
+}
 
-    filesMatching("jingle.plugin.json") {
-        expand "version": project.version
-    }
+var jinglePluginsFolderPath = "${System.getProperty('user.home')}/.config/Jingle/plugins"
+task copyJar(type: Copy) {
+    from shadowJar
+    into jinglePluginsFolderPath
 }

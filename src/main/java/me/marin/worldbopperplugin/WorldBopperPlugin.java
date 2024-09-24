@@ -42,6 +42,10 @@ public class WorldBopperPlugin {
         }
 
         WorldBopperSettings.load();
+        if (isFirstLaunch) {
+            WorldBopperSettings.getInstance().worldsToKeep = WorldBopperSettings.defaultKeepWorldInfo();
+            WorldBopperSettings.save();
+        }
 
         WorldBopperUtil.runTimerAsync(new InstanceManagerRunnable(), 1000);
 

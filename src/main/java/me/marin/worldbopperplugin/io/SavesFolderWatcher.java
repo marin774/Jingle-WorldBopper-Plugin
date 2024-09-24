@@ -12,15 +12,13 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public class SavesFolderWatcher extends FileWatcher {
 
-    private final Set<String> netherWorldsToKeep = ConcurrentHashMap.newKeySet();
+    private static final Map<WorldBopperSettings.KeepWorldInfo, Set<String>> worldsToKeepMap = new ConcurrentHashMap<>();
 
     public SavesFolderWatcher(Path path) {
         super("saves-folder-watcher", path.toFile());
@@ -43,13 +41,18 @@ public class SavesFolderWatcher extends FileWatcher {
         if (!isValidDirectoryName(dirName)) return;
 
         long worldsToKeep = WorldBopperSettings.getInstance().savesBuffer;
-        if (WorldBopperSettings.getInstance().keepNetherWorlds) {
-            worldsToKeep += netherWorldsToKeep.size();
+        // Count how many worlds should be kept.
+        // These world names are in worldsToKeep map, which is populated at the end of this method every time WorldBopper runs.
+        // Known "issue": if user manually deletes those worlds at some point, savesBuffer will essentially be larger until Jingle is restarted.
+        for (WorldBopperSettings.KeepWorldInfo keepWorldInfo : WorldBopperSettings.getInstance().worldsToKeep) {
+            if (keepWorldInfo.getCondition() != WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
+                worldsToKeep += this.worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).size();
+            }
         }
 
         File[] directories = this.file.listFiles(File::isDirectory);
         if (directories == null) {
-            // IO error occurred, clear next time I guess
+            // IO error, clear next time I guess
             return;
         }
         File[] validDirectories = Arrays.stream(directories)
@@ -60,6 +63,7 @@ public class SavesFolderWatcher extends FileWatcher {
             Jingle.log(Level.DEBUG, "(WorldBopper) Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
             return;
         }
+
         // Sort valid worlds by time
         try {
             Arrays.sort(validDirectories, Comparator.comparingLong(File::lastModified));
@@ -72,16 +76,17 @@ public class SavesFolderWatcher extends FileWatcher {
         for (int i = 0; i < validDirectories.length - worldsToKeep; i++) {
             File oldestDir = validDirectories[i];
 
-            // Keep worlds with nether (rsg.enter_nether in SpeedrunIGT events.log)
-            if (WorldBopperSettings.getInstance().keepNetherWorlds) {
-                if (netherWorldsToKeep.contains(oldestDir.getName())) {
-                    continue;
+            // Keep worlds
+            if (shouldKeepWorld(oldestDir)) {
+                WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(oldestDir.getName());
+
+                if (!worldsToKeepMap.containsKey(keepWorldInfo)) {
+                    worldsToKeepMap.put(keepWorldInfo, new HashSet<>());
                 }
-                if (shouldKeepWorld(oldestDir)) {
-                    netherWorldsToKeep.add(oldestDir.getName());
-                    Jingle.log(Level.DEBUG, "(WorldBopper) Not deleting " + oldestDir.getName() + " because it has nether enter!");
-                    continue;
-                }
+                worldsToKeepMap.get(keepWorldInfo).add(oldestDir.getName());
+
+                Jingle.log(Level.DEBUG, "(WorldBopper) Not deleting " + oldestDir.getName() + " because it has nether enter!");
+                continue;
             }
 
             // Delete
@@ -101,10 +106,22 @@ public class SavesFolderWatcher extends FileWatcher {
     }
 
     private boolean isValidDirectoryName(String name) {
-        return name.contains("Speedrun #") || name.startsWith("Benchmark Reset #") || name.startsWith("New World") || name.startsWith("Practice Seed") || name.startsWith("Seed Paster");
+        return WorldBopperSettings.getInstance().getKeepWorldInfo(name) != null;
     }
 
     private boolean shouldKeepWorld(File file) {
+        String worldName = file.getName();
+        WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(worldName);
+
+        if (worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).contains(worldName)) {
+            return true;
+        }
+
+        WorldBopperSettings.KeepCondition keepCondition = keepWorldInfo.getCondition();
+        if (keepCondition == WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
+            return false;
+        }
+
         File speedrunIGTDir = new File(file, "speedrunigt");
         if (!speedrunIGTDir.exists()) {
             return false;
@@ -113,11 +130,38 @@ public class SavesFolderWatcher extends FileWatcher {
         if (!eventsLog.exists()) {
             return false;
         }
+
         try {
             String eventsLogText = WorldBopperUtil.readFile(eventsLog.toPath());
+            boolean hasBastion = false;
+            boolean hasFortress = false;
             for (String line : eventsLogText.split("[\\r\\n]+")) {
-                if (line.startsWith("rsg.enter_nether")) {
-                    return true;
+                if (keepCondition.getEventName() != null) {
+                    if (line.startsWith(keepCondition.getEventName())) {
+                        return true;
+                    }
+                } else {
+                    if (line.startsWith("rsg.enter_bastion")) {
+                        hasBastion = true;
+                    }
+                    if (line.startsWith("rsg.enter_fortress")) {
+                        hasFortress = true;
+                    }
+
+                    switch (keepCondition) {
+                        case STRUCTURE_1: {
+                            if (hasBastion || hasFortress) {
+                                return true;
+                            }
+                            break;
+                        }
+                        case STRUCTURE_2: {
+                            if (hasBastion && hasFortress) {
+                                return true;
+                            }
+                            break;
+                        }
+                    }
                 }
             }
             return false;
@@ -125,6 +169,10 @@ public class SavesFolderWatcher extends FileWatcher {
             // file is probably actually empty, this should never happen, clear this world
             return false;
         }
+    }
+
+    public static void clearWorldsToKeepCache() {
+        worldsToKeepMap.clear();
     }
 
 }
