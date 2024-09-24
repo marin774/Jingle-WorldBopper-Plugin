@@ -87,11 +87,8 @@ public class WorldBopperSettings {
     public static List<KeepWorldInfo> defaultKeepWorldInfo() {
         List<KeepWorldInfo> worldsToKeep = new ArrayList<>();
         worldsToKeep.add(new KeepWorldInfo("Random Speedrun #", KeepCondition.NETHER));
-        worldsToKeep.add(new KeepWorldInfo("Set Speedrun #", KeepCondition.END));
         worldsToKeep.add(new KeepWorldInfo("Benchmark Reset #", KeepCondition.ALWAYS_DELETE));
         worldsToKeep.add(new KeepWorldInfo("New World", KeepCondition.COMPLETED));
-        worldsToKeep.add(new KeepWorldInfo("Practice Seed", KeepCondition.BLIND));
-        worldsToKeep.add(new KeepWorldInfo("Seed Paster", KeepCondition.BLIND));
         return worldsToKeep;
     }
 
