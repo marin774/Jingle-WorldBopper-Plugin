@@ -12,13 +12,7 @@ Once you've installed the plugin and restarted Jingle, enable the plugin and con
 
 ## Config
 - **Enable WorldBopper?** - Whether worlds should be actively bopped or not.
-- **Keep worlds with nether enters?** - Whether to keep 'Random Speedrun #' worlds that have reached the Nether. You can still manually clear them in Jingle by pressing the Clear Worlds button.
-- **Max worlds folder size** - Maximum number of worlds (that aren't nether enters, if that option is enabled) to keep in the `saves` folder. This number must be between 50 and 5000.
-
-![image](https://github.com/user-attachments/assets/fc8fc791-5cb9-4829-b1a1-8f0e134001cf)
-
-## What worlds are deleted?
-WorldBopper plugin deletes the same worlds a Jingle `Clear Worlds` function would.
-This includes world files that begin with 'New World', 'Random Speedrun #', 'Set Speedrun #', 'Benchmark Reset #', 'Practice Seed' and 'Seed Paster'.
-
-If you have enabled the 'Keep worlds with nether enters?' option, worlds that have reached Nether will not be deleted.
+- **Max worlds folder size** - Maximum number of worlds (that aren't kept, if any prefixes are set up) to keep in the `saves` folder. This number must be between 50 and 5000.
+- **World Prefixes** - You can define custom world prefixes, and what to do with such worlds. For example, all world names beginning with `Random Speedrun #` will be deleted if they don't reach a bastion, otherwise they will stay in the saves folder and not get deleted. If a world prefix is not listed, such worlds are never deleted.
+  
+![image](https://github.com/user-attachments/assets/c6005378-08a1-4b7f-ae86-bf6d39ad0529)
