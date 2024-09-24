@@ -1,0 +1,6 @@
+{
+  "name": "WorldBopper",
+  "id": "jingle-worldbopper-plugin",
+  "version": "${version}",
+  "initializer": "me.marin.worldbopperplugin.WorldBopperPlugin::initialize"
+}

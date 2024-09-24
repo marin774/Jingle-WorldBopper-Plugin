@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+}
+
+group = project.maven_group
+version = project.plugin_version
+archivesBaseName = project.archives_base_name
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+    maven { url "https://www.jetbrains.com/intellij-repository/releases" }
+}
+
+compileJava {
+    options.compilerArgs << '-parameters'
+}
+
+dependencies {
+    // Choose Jingle version: https://jitpack.io/#DuncanRuns/Jingle/
+    implementation 'com.github.DuncanRuns:Jingle:v1.0.0'
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok:1.18.34'
+    annotationProcessor 'org.projectlombok:lombok:1.18.34'
+}
+
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("jingle.plugin.json") {
+        expand "version": project.version
+    }
+}
