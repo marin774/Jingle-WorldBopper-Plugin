@@ -1,7 +1,6 @@
 package me.marin.worldbopperplugin.util;
 
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.io.IOException;
@@ -11,6 +10,8 @@ import java.nio.file.Path;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 public class WorldBopperUtil {
 
@@ -43,7 +44,7 @@ public class WorldBopperUtil {
                 }
                 Thread.sleep(10);
             } catch (IOException | InterruptedException e) {
-                Jingle.log(Level.DEBUG, "(WorldBopper) Could not read " + path.getFileName() + ":\n" + ExceptionUtil.toDetailedString(e));
+                log(Level.DEBUG, "Could not read " + path.getFileName() + ":\n" + ExceptionUtil.toDetailedString(e));
             }
             attempts++;
         }

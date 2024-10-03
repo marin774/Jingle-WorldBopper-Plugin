@@ -3,14 +3,10 @@ package me.marin.worldbopperplugin.io;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import me.marin.worldbopperplugin.util.VersionUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 import xyz.duncanruns.jingle.util.FileUtil;
 
@@ -20,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static me.marin.worldbopperplugin.WorldBopperPlugin.SETTINGS_PATH;
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 @ToString
 public class WorldBopperSettings {
@@ -62,7 +59,7 @@ public class WorldBopperSettings {
             try {
                 s = FileUtil.readString(SETTINGS_PATH);
             } catch (IOException e) {
-                Jingle.log(Level.ERROR, "(WorldBopper) Error while reading settings, resetting back to default:\n" + ExceptionUtil.toDetailedString(e));
+                log(Level.ERROR, "Error while reading settings, resetting back to default:\n" + ExceptionUtil.toDetailedString(e));
                 loadDefaultSettings();
                 return;
             }
@@ -74,7 +71,7 @@ public class WorldBopperSettings {
         try {
             FileUtil.writeString(SETTINGS_PATH, GSON.toJson(instance));
         } catch (IOException e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Failed to save WorldBopper Settings: " + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Failed to save WorldBopper Settings: " + ExceptionUtil.toDetailedString(e));
         }
     }
 
@@ -92,7 +89,7 @@ public class WorldBopperSettings {
         return worldsToKeep;
     }
 
-    @AllArgsConstructor @Getter @Setter @ToString
+    @AllArgsConstructor @Getter @Setter @ToString @EqualsAndHashCode
     public static class KeepWorldInfo {
 
         @SerializedName("world prefix")

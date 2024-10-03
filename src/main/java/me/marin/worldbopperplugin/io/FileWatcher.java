@@ -10,6 +10,7 @@ import java.nio.file.*;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 /**
  * Works with single files and directories.
@@ -39,7 +40,7 @@ public abstract class FileWatcher implements Runnable {
         try {
             watchService = FileSystems.getDefault().newWatchService();
         } catch (IOException e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Could not start WatchService:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Could not start WatchService:\n" + ExceptionUtil.toDetailedString(e));
             return;
         }
 
@@ -67,7 +68,7 @@ public abstract class FileWatcher implements Runnable {
                             try {
                                 handleFileUpdated(updatedFile);
                             } catch (Exception e) {
-                                Jingle.log(Level.ERROR, "(WorldBopper) Unhandled exception in '" + this.name + "':\n" + ExceptionUtil.toDetailedString(e));
+                                log(Level.ERROR, "Unhandled exception in '" + this.name + "':\n" + ExceptionUtil.toDetailedString(e));
                             }
                         }
                     }
@@ -75,7 +76,7 @@ public abstract class FileWatcher implements Runnable {
                         try {
                             handleFileCreated(updatedFile);
                         } catch (Exception e) {
-                            Jingle.log(Level.ERROR, "(WorldBopper) Unhandled exception in '" + this.name + "':\n" + ExceptionUtil.toDetailedString(e));
+                            log(Level.ERROR, "Unhandled exception in '" + this.name + "':\n" + ExceptionUtil.toDetailedString(e));
                         }
                     }
                 }
@@ -83,11 +84,11 @@ public abstract class FileWatcher implements Runnable {
         } catch (ClosedWatchServiceException e) {
             // when stop method gets called, ClosedWatchServiceException is thrown, and file watcher should stop.
         } catch (IOException | InterruptedException e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Error while reading:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Error while reading:\n" + ExceptionUtil.toDetailedString(e));
         } catch (Exception e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Unknown exception while reading:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Unknown exception while reading:\n" + ExceptionUtil.toDetailedString(e));
         }
-        Jingle.log(Level.DEBUG, "(WorldBopper) FileWatcher was closed " + (name));
+        log(Level.DEBUG, "FileWatcher was closed " + (name));
     }
 
     protected abstract void handleFileUpdated(File file);
@@ -96,7 +97,7 @@ public abstract class FileWatcher implements Runnable {
         try {
             watchService.close();
         } catch (IOException e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Could not stop WatchService:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Could not stop WatchService:\n" + ExceptionUtil.toDetailedString(e));
         }
     }
 

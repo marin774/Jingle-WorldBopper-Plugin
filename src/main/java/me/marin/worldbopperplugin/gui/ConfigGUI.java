@@ -2,14 +2,12 @@ package me.marin.worldbopperplugin.gui;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import me.marin.worldbopperplugin.io.SavesFolderWatcher;
 import me.marin.worldbopperplugin.io.WorldBopperSettings;
 import me.marin.worldbopperplugin.util.UpdateUtil;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -17,6 +15,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.text.NumberFormat;
+
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 public class ConfigGUI extends JPanel {
 
@@ -31,7 +31,7 @@ public class ConfigGUI extends JPanel {
     private JPanel prefixesPanel;
     private JScrollPane scrollPane;
 
-    private GridBagConstraints gbc;
+    private final GridBagConstraints gbc = new GridBagConstraints();
 
     public ConfigGUI() {
         $$$setupUI$$$();
@@ -45,7 +45,7 @@ public class ConfigGUI extends JPanel {
             WorldBopperSettings settings = WorldBopperSettings.getInstance();
             settings.worldbopperEnabled = enableWorldbopper.isSelected();
             WorldBopperSettings.save();
-            Jingle.log(Level.INFO, "(WorldBopper) " + (settings.worldbopperEnabled ? "WorldBopper is now active." : "WorldBopper is no longer active."));
+            log(Level.INFO, settings.worldbopperEnabled ? "WorldBopper is now active." : "WorldBopper is no longer active.");
         });
 
         saveButton.addActionListener(e -> {
@@ -84,6 +84,17 @@ public class ConfigGUI extends JPanel {
         });
     }
 
+    private void createUIComponents() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance();
+        numberFormat.setParseIntegerOnly(true);
+        savesBuffer = new JFormattedTextField(numberFormat);
+
+        GridBagLayout gbl = new GridBagLayout();
+        gbl.columnWidths = new int[]{150, -1, -1};
+        prefixesPanel = new JPanel(gbl);
+        prefixesPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
+    }
+
     public void updateGUI() {
         enableWorldbopper.setSelected(WorldBopperSettings.getInstance().worldbopperEnabled);
         savesBuffer.setValue(WorldBopperSettings.getInstance().savesBuffer);
@@ -101,7 +112,6 @@ public class ConfigGUI extends JPanel {
             gbc.insets = new Insets(0, 0, 3, 0);
             JLabel label = new JLabel("World prefix:");
             label.setHorizontalAlignment(SwingConstants.LEFT);
-            //gbc.ipadx = 150 - label.getWidth();
             prefixesPanel.add(label, gbc);
 
             gbc.gridx = 1;
@@ -141,30 +151,16 @@ public class ConfigGUI extends JPanel {
                 }
             });
 
-            JComboBox<String> keepConditionComboBox = new JComboBox<>();
-            DefaultComboBoxModel<String> cbModel = new DefaultComboBoxModel<>();
-            cbModel.addElement("Always delete");
-            cbModel.addElement("Reached Nether");
-            cbModel.addElement("Reached Bastion");
-            cbModel.addElement("Reached Fortress");
-            cbModel.addElement("Reached one structure");
-            cbModel.addElement("Reached both structures");
-            cbModel.addElement("Reached Nether Exit");
-            cbModel.addElement("Reached Stronghold");
-            cbModel.addElement("Reached End");
-            cbModel.addElement("Completed");
-            keepConditionComboBox.setModel(cbModel);
+            JComboBox<String> keepConditionComboBox = getConditionsComboBox();
             keepConditionComboBox.setSelectedItem(keepWorldInfo.getCondition().getDisplay());
-
-            JButton deletePrefix = new JButton();
-            deletePrefix.setText("Remove prefix");
-
             keepConditionComboBox.addActionListener(a -> {
                 WorldBopperSettings.KeepCondition kc = WorldBopperSettings.KeepCondition.match((String) keepConditionComboBox.getSelectedItem());
                 keepWorldInfo.setCondition(kc);
                 WorldBopperSettings.save();
             });
 
+            JButton deletePrefix = new JButton();
+            deletePrefix.setText("Remove prefix");
             deletePrefix.addActionListener(a -> {
                 int choice = JOptionPane.showConfirmDialog(null, "Are you sure you want to remove the prefix '" + keepWorldInfo.getPrefix() + "'?", "Remove prefix?", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
                 if (choice == JOptionPane.YES_OPTION) {
@@ -178,6 +174,7 @@ public class ConfigGUI extends JPanel {
 
             int top = row == 1 ? 0 : 10;
 
+            // Prefix text field
             gbc.gridx = 0;
             gbc.gridy = row;
             gbc.weightx = 100;
@@ -186,12 +183,15 @@ public class ConfigGUI extends JPanel {
             prefixesPanel.add(field, gbc);
             gbc.fill = GridBagConstraints.NONE;
 
+            // Condition combobox (dropdown)
             gbc.gridx = 1;
             gbc.gridy = row;
             gbc.weightx = 70;
             gbc.ipadx = 0;
             gbc.insets = new Insets(top, 5, 0, 0);
             prefixesPanel.add(keepConditionComboBox, gbc);
+
+            // Remove prefix button
             gbc.gridx = 2;
             gbc.gridy = row;
             gbc.weightx = 30;
@@ -202,20 +202,25 @@ public class ConfigGUI extends JPanel {
             row += 1;
         }
 
+        log(Level.DEBUG, "Clearing cache because GUI updated..");
         SavesFolderWatcher.clearWorldsToKeepCache();
     }
 
-    private void createUIComponents() {
-        NumberFormat numberFormat = NumberFormat.getNumberInstance();
-        numberFormat.setParseIntegerOnly(true);
-        savesBuffer = new JFormattedTextField(numberFormat);
-
-        GridBagLayout gbl = new GridBagLayout();
-        gbl.columnWidths = new int[]{150, -1, -1};
-        prefixesPanel = new JPanel(gbl);
-        prefixesPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
-
-        gbc = new GridBagConstraints();
+    private static JComboBox<String> getConditionsComboBox() {
+        JComboBox<String> keepConditionComboBox = new JComboBox<>();
+        DefaultComboBoxModel<String> cbModel = new DefaultComboBoxModel<>();
+        cbModel.addElement("Always delete");
+        cbModel.addElement("Reached Nether");
+        cbModel.addElement("Reached Bastion");
+        cbModel.addElement("Reached Fortress");
+        cbModel.addElement("Reached one structure");
+        cbModel.addElement("Reached both structures");
+        cbModel.addElement("Reached Nether Exit");
+        cbModel.addElement("Reached Stronghold");
+        cbModel.addElement("Reached End");
+        cbModel.addElement("Completed");
+        keepConditionComboBox.setModel(cbModel);
+        return keepConditionComboBox;
     }
 
     // Run this to force IntelliJ to generate GUI code

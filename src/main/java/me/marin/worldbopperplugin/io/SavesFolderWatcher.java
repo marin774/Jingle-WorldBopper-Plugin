@@ -3,7 +3,6 @@ package me.marin.worldbopperplugin.io;
 import me.marin.worldbopperplugin.util.FileStillEmptyException;
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.io.File;
@@ -16,13 +15,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
+
 public class SavesFolderWatcher extends FileWatcher {
 
     private static final Map<WorldBopperSettings.KeepWorldInfo, Set<String>> worldsToKeepMap = new ConcurrentHashMap<>();
 
     public SavesFolderWatcher(Path path) {
         super("saves-folder-watcher", path.toFile());
-        Jingle.log(Level.DEBUG, "(WorldBopper) Saves folder watcher is running...");
+        log(Level.DEBUG, "Saves folder watcher is running...");
     }
 
     @Override
@@ -43,10 +44,9 @@ public class SavesFolderWatcher extends FileWatcher {
         long worldsToKeep = WorldBopperSettings.getInstance().savesBuffer;
         // Count how many worlds should be kept.
         // These world names are in worldsToKeep map, which is populated at the end of this method every time WorldBopper runs.
-        // Known "issue": if user manually deletes those worlds at some point, savesBuffer will essentially be larger until Jingle is restarted.
         for (WorldBopperSettings.KeepWorldInfo keepWorldInfo : WorldBopperSettings.getInstance().worldsToKeep) {
             if (keepWorldInfo.getCondition() != WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
-                worldsToKeep += this.worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).size();
+                worldsToKeep += worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).size();
             }
         }
 
@@ -60,7 +60,7 @@ public class SavesFolderWatcher extends FileWatcher {
                 .toArray(File[]::new);
 
         if (validDirectories.length <= worldsToKeep) {
-            Jingle.log(Level.DEBUG, "(WorldBopper) Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
+            log(Level.DEBUG, "Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
             return;
         }
 
@@ -83,24 +83,25 @@ public class SavesFolderWatcher extends FileWatcher {
                 if (!worldsToKeepMap.containsKey(keepWorldInfo)) {
                     worldsToKeepMap.put(keepWorldInfo, new HashSet<>());
                 }
-                worldsToKeepMap.get(keepWorldInfo).add(oldestDir.getName());
+                if (worldsToKeepMap.get(keepWorldInfo).add(oldestDir.getName())) {
+                    log(Level.DEBUG, "Keeping " + oldestDir.getName() + " (" + keepWorldInfo.getCondition().getDisplay() + ")");
+                }
 
-                Jingle.log(Level.DEBUG, "(WorldBopper) Not deleting " + oldestDir.getName() + " because it has nether enter!");
                 continue;
             }
 
             // Delete
-            Jingle.log(Level.DEBUG, "(WorldBopper) Deleting " + oldestDir.getName());
+            log(Level.DEBUG, "Deleting " + oldestDir.getName());
             try (Stream<Path> stream = Files.walk(oldestDir.toPath())) {
                 stream.sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(File::delete);
             } catch (NoSuchFileException ignored) {
-                Jingle.log(Level.DEBUG, "(WorldBopper) File " + oldestDir.getName() + " is missing? (NoSuchFileException)");
+                log(Level.DEBUG, "File " + oldestDir.getName() + " is missing? (NoSuchFileException)");
             } catch (AccessDeniedException e) {
-                Jingle.log(Level.DEBUG, "(WorldBopper) Access for file " + oldestDir.getName() + " denied? (AccessDeniedException)");
+                log(Level.DEBUG, "Access for file " + oldestDir.getName() + " denied? (AccessDeniedException)");
             } catch (IOException e) {
-                Jingle.log(Level.ERROR, "(WorldBopper) Unknown error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
+                log(Level.ERROR, "Unknown error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
             }
         }
     }
@@ -133,6 +134,9 @@ public class SavesFolderWatcher extends FileWatcher {
 
         try {
             String eventsLogText = WorldBopperUtil.readFile(eventsLog.toPath());
+            if (eventsLogText == null) {
+                return false;
+            }
             boolean hasBastion = false;
             boolean hasFortress = false;
             for (String line : eventsLogText.split("[\\r\\n]+")) {

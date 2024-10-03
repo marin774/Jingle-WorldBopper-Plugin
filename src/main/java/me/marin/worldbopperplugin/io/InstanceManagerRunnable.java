@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
+
 /**
  * Creates new world folder watchers when new instances appear.
  * <p>
@@ -32,7 +34,7 @@ public class InstanceManagerRunnable implements Runnable {
         try {
             doRun();
         } catch (Exception e) {
-            Jingle.log(Level.DEBUG, "(WorldBopper) Error while tracking resets & wall time:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.DEBUG, "Error while tracking resets & wall time:\n" + ExceptionUtil.toDetailedString(e));
         }
     }
 
@@ -51,7 +53,7 @@ public class InstanceManagerRunnable implements Runnable {
                 // close old watchers (this instance was just closed)
                 instanceWatcherMap.get(closedInstancePath).stop();
                 instanceWatcherMap.remove(closedInstancePath);
-                Jingle.log(Level.DEBUG, "(WorldBopper) Closed a FileWatcher for instance: " + closedInstancePath);
+                log(Level.ERROR, "Closed a FileWatcher for instance: " + closedInstancePath);
             }
         }
 
@@ -60,7 +62,7 @@ public class InstanceManagerRunnable implements Runnable {
             if (!instanceWatcherMap.containsKey(path)) {
                 Path savesPath = Paths.get(path, "saves");
 
-                Jingle.log(Level.DEBUG, "(WorldBopper) Starting a new FileWatcher for instance: " + path);
+                log(Level.ERROR, "Starting a new FileWatcher for instance: " + path);
 
                 SavesFolderWatcher watcher = new SavesFolderWatcher(savesPath);
                 WorldBopperUtil.runAsync("saves-folder-watcher", watcher);

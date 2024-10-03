@@ -52,6 +52,14 @@ shadowJar {
     configurations = [project.configurations.shadow]
 }
 
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("jingle.plugin.json") {
+        expand "version": project.version
+    }
+}
+
 var jinglePluginsFolderPath = "${System.getProperty('user.home')}/.config/Jingle/plugins"
 task copyJar(type: Copy) {
     from shadowJar

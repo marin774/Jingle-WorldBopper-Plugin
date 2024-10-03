@@ -2,7 +2,6 @@ package me.marin.worldbopperplugin.util;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.plugin.PluginManager;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
@@ -15,9 +14,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
+
 public class VersionUtil {
 
-    public static final Version CURRENT_VERSION = new Version(1, 1, 0);
+    public static final Version CURRENT_VERSION = new Version(1, 1, 1);
 
     public static Version version(String version) {
         String[] parts = version.split("\\.");
@@ -33,7 +34,7 @@ public class VersionUtil {
         try {
             plugins = PluginManager.getFolderPlugins();
         } catch (IOException e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Failed to load plugins from folder:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Failed to load plugins from folder:\n" + ExceptionUtil.toDetailedString(e));
         }
 
         // Mod ID -> path and data
@@ -63,7 +64,7 @@ public class VersionUtil {
         try {
             Files.delete(path);
         } catch (Exception e) {
-            Jingle.log(Level.ERROR, "(WorldBopper) Failed to delete " + path.getFileName() + " plugin:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.ERROR, "Failed to delete " + path.getFileName() + " plugin:\n" + ExceptionUtil.toDetailedString(e));
         }
     }
 
