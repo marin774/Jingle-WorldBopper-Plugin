@@ -53,7 +53,7 @@ public class InstanceManagerRunnable implements Runnable {
                 // close old watchers (this instance was just closed)
                 instanceWatcherMap.get(closedInstancePath).stop();
                 instanceWatcherMap.remove(closedInstancePath);
-                log(Level.ERROR, "Closed a FileWatcher for instance: " + closedInstancePath);
+                log(Level.DEBUG, "Closed a FileWatcher for instance: " + closedInstancePath);
             }
         }
 
@@ -62,7 +62,7 @@ public class InstanceManagerRunnable implements Runnable {
             if (!instanceWatcherMap.containsKey(path)) {
                 Path savesPath = Paths.get(path, "saves");
 
-                log(Level.ERROR, "Starting a new FileWatcher for instance: " + path);
+                log(Level.DEBUG, "Starting a new FileWatcher for instance: " + path);
 
                 SavesFolderWatcher watcher = new SavesFolderWatcher(savesPath);
                 WorldBopperUtil.runAsync("saves-folder-watcher", watcher);

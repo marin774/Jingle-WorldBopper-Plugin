@@ -60,7 +60,7 @@ public class SavesFolderWatcher extends FileWatcher {
                 .toArray(File[]::new);
 
         if (validDirectories.length <= worldsToKeep) {
-            log(Level.DEBUG, "Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
+            // log(Level.DEBUG, "Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
             return;
         }
 
@@ -84,14 +84,14 @@ public class SavesFolderWatcher extends FileWatcher {
                     worldsToKeepMap.put(keepWorldInfo, new HashSet<>());
                 }
                 if (worldsToKeepMap.get(keepWorldInfo).add(oldestDir.getName())) {
-                    log(Level.DEBUG, "Keeping " + oldestDir.getName() + " (" + keepWorldInfo.getCondition().getDisplay() + ")");
+                    // log(Level.DEBUG, "Keeping " + oldestDir.getName() + " (" + keepWorldInfo.getCondition().getDisplay() + ")");
                 }
 
                 continue;
             }
 
             // Delete
-            log(Level.DEBUG, "Deleting " + oldestDir.getName());
+            //log(Level.DEBUG, "Deleting " + oldestDir.getName());
             try (Stream<Path> stream = Files.walk(oldestDir.toPath())) {
                 stream.sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
@@ -101,7 +101,7 @@ public class SavesFolderWatcher extends FileWatcher {
             } catch (AccessDeniedException e) {
                 log(Level.DEBUG, "Access for file " + oldestDir.getName() + " denied? (AccessDeniedException)");
             } catch (IOException e) {
-                log(Level.ERROR, "Unknown error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
+                log(Level.ERROR, "Error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
             }
         }
     }
