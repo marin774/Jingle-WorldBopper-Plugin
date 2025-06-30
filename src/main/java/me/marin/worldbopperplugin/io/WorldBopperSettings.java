@@ -32,9 +32,6 @@ public class WorldBopperSettings {
     @SerializedName("worlds to keep")
     public List<KeepWorldInfo> worldsToKeep = new ArrayList<>();
 
-    @SerializedName("boppable worlds buffer")
-    public long savesBuffer = 100;
-
     @SerializedName("version")
     public String version;
 

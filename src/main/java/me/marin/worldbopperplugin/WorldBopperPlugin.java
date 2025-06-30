@@ -10,7 +10,6 @@ import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
 import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.JingleAppLaunch;
-import xyz.duncanruns.jingle.JingleOptions;
 import xyz.duncanruns.jingle.gui.JingleGUI;
 import xyz.duncanruns.jingle.plugin.PluginManager;
 
@@ -26,8 +25,6 @@ public class WorldBopperPlugin {
     public static final Path WORLD_BOPPER_FOLDER_PATH = Jingle.FOLDER.resolve("worldbopper-plugin");
     public static final Path PLUGINS_PATH = Jingle.FOLDER.resolve("plugins");
     public static final Path SETTINGS_PATH = WORLD_BOPPER_FOLDER_PATH.resolve("settings.json");
-
-    public static ConfigGUI configGUI;
 
     public static void initialize() {
         log(Level.INFO, "Running WorldBopper Plugin v" + CURRENT_VERSION + "!");
@@ -50,8 +47,7 @@ public class WorldBopperPlugin {
         VersionUtil.deleteOldVersionJars();
         UpdateUtil.checkForUpdatesAndUpdate(true);
 
-        configGUI = new ConfigGUI();
-        JingleGUI.addPluginTab("World Bopper", configGUI);
+        JingleGUI.addPluginTab("World Bopper", new ConfigGUI().getMainPanel());
     }
 
     public static void updateFrom(VersionUtil.Version version) {
