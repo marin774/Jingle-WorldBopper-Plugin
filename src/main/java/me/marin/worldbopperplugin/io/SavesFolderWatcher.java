@@ -1,7 +1,9 @@
 package me.marin.worldbopperplugin.io;
 
+import me.marin.worldbopperplugin.WorldBopperPlugin;
 import me.marin.worldbopperplugin.util.FileStillEmptyException;
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
@@ -13,13 +15,18 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 public class SavesFolderWatcher extends FileWatcher {
 
-    private static final Map<WorldBopperSettings.KeepWorldInfo, Set<String>> worldsToKeepMap = new ConcurrentHashMap<>();
+    private static final int LOG_INTERVAL = 250;
+
+    private final Map<WorldBopperSettings.KeepWorldInfo, Set<String>> worldsToKeepMap = new ConcurrentHashMap<>();
+
+    private int totalDeleted = 0;
 
     public SavesFolderWatcher(Path path) {
         super("saves-folder-watcher", path.toFile());
@@ -41,68 +48,13 @@ public class SavesFolderWatcher extends FileWatcher {
         String dirName = file.getName();
         if (!isValidDirectoryName(dirName)) return;
 
-        long worldsToKeep = WorldBopperSettings.getInstance().savesBuffer;
-        // Count how many worlds should be kept.
-        // These world names are in worldsToKeep map, which is populated at the end of this method every time WorldBopper runs.
-        for (WorldBopperSettings.KeepWorldInfo keepWorldInfo : WorldBopperSettings.getInstance().worldsToKeep) {
-            if (keepWorldInfo.getCondition() != WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
-                worldsToKeep += worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).size();
-            }
-        }
+        int before = totalDeleted / LOG_INTERVAL;
 
-        File[] directories = this.file.listFiles(File::isDirectory);
-        if (directories == null) {
-            // IO error, clear next time I guess
-            return;
-        }
-        File[] validDirectories = Arrays.stream(directories)
-                .filter(d -> isValidDirectoryName(d.getName()))
-                .toArray(File[]::new);
+        totalDeleted += clearWorlds();
 
-        if (validDirectories.length <= worldsToKeep) {
-            // log(Level.DEBUG, "Not deleting any worlds (" + validDirectories.length + " <= " + worldsToKeep + ")");
-            return;
-        }
-
-        // Sort valid worlds by time
-        try {
-            Arrays.sort(validDirectories, Comparator.comparingLong(File::lastModified));
-        } catch (IllegalArgumentException ignored) {
-            // rare JDK bug (https://stackoverflow.com/questions/13575224/comparison-method-violates-its-general-contract-timsort-and-gridlayout)
-            // probably not fixable because Arrays class might be loaded before the plugin
-            return;
-        }
-
-        for (int i = 0; i < validDirectories.length - worldsToKeep; i++) {
-            File oldestDir = validDirectories[i];
-
-            // Keep worlds
-            if (shouldKeepWorld(oldestDir)) {
-                WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(oldestDir.getName());
-
-                if (!worldsToKeepMap.containsKey(keepWorldInfo)) {
-                    worldsToKeepMap.put(keepWorldInfo, new HashSet<>());
-                }
-                if (worldsToKeepMap.get(keepWorldInfo).add(oldestDir.getName())) {
-                    // log(Level.DEBUG, "Keeping " + oldestDir.getName() + " (" + keepWorldInfo.getCondition().getDisplay() + ")");
-                }
-
-                continue;
-            }
-
-            // Delete
-            //log(Level.DEBUG, "Deleting " + oldestDir.getName());
-            try (Stream<Path> stream = Files.walk(oldestDir.toPath())) {
-                stream.sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-            } catch (NoSuchFileException ignored) {
-                log(Level.DEBUG, "File " + oldestDir.getName() + " is missing? (NoSuchFileException)");
-            } catch (AccessDeniedException e) {
-                log(Level.DEBUG, "Access for file " + oldestDir.getName() + " denied? (AccessDeniedException)");
-            } catch (IOException e) {
-                log(Level.ERROR, "Error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
-            }
+        int after = totalDeleted / LOG_INTERVAL;
+        if (after > before) {
+            WorldBopperPlugin.log(Level.DEBUG, "Cleared " + (after * LOG_INTERVAL) + " worlds in this instance.");
         }
     }
 
@@ -175,7 +127,57 @@ public class SavesFolderWatcher extends FileWatcher {
         }
     }
 
-    public static void clearWorldsToKeepCache() {
+    public synchronized int clearWorlds() {
+        long numKeep = 100;
+        // Count how many worlds should be kept.
+        // These world names are in worldsToKeep map, which is populated at the end of this method every time WorldBopper runs.
+        for (WorldBopperSettings.KeepWorldInfo keepWorldInfo : WorldBopperSettings.getInstance().worldsToKeep) {
+            if (keepWorldInfo.getCondition() != WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
+                numKeep += worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).size();
+            }
+        }
+
+        File[] directories = this.file.listFiles(File::isDirectory);
+        if (directories == null) {
+            // IO error, clear next time I guess
+            return 0;
+        }
+        AtomicInteger deleted = new AtomicInteger();
+        Arrays.stream(directories)
+                .parallel()
+                .filter(d -> isValidDirectoryName(d.getName()))
+                .map(f -> Pair.of(f, f.lastModified())) // more efficient than only sorting by lastModified, shoutout duncan
+                .sorted(Comparator.comparingLong(p -> -p.getRight())) // most recent first
+                .map(Pair::getLeft)
+                .skip(numKeep)
+                .filter(f -> {
+                    if (shouldKeepWorld(f)) {
+                        WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
+
+                        worldsToKeepMap.computeIfAbsent(keepWorldInfo, k -> new HashSet<>()).add(f.getName());
+                        return false;
+                    }
+                    return true;
+                })
+                .forEach(f -> {
+                    // Delete
+                    try (Stream<Path> stream = Files.walk(f.toPath())) {
+                        stream.sorted(Comparator.reverseOrder())
+                                .map(Path::toFile)
+                                .forEach(File::delete);
+                        deleted.addAndGet(1);
+                    } catch (NoSuchFileException ignored) {
+                        log(Level.DEBUG, "File " + f.getName() + " is missing? (NoSuchFileException)");
+                    } catch (AccessDeniedException e) {
+                        log(Level.DEBUG, "Access for file " + f.getName() + " denied? (AccessDeniedException)");
+                    } catch (IOException e) {
+                        log(Level.ERROR, "Error while deleting worlds:\n" + ExceptionUtil.toDetailedString(e));
+                    }
+                });
+        return deleted.get();
+    }
+
+    public void invalidateCache() {
         worldsToKeepMap.clear();
     }
 
