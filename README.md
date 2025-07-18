@@ -13,7 +13,10 @@ You can now configure the plugin.
 
 ## Config
 - **Enable WorldBopper** - Whether worlds should be actively bopped or not.
-- **Boppable worlds** - You can define custom world prefixes, and what to do with such worlds. For example, all world names beginning with `Random Speedrun #` will be deleted if they don't reach a bastion, otherwise they will stay in the saves folder and not get deleted. World names that aren't listed here will NOT be deleted.
-  
-![image](https://github.com/user-attachments/assets/6e5e45c1-8bd3-4e08-8675-64e4201bcbce)
+- **Boppable worlds** - You can define custom world prefixes, and what to do with such worlds. For example, all world names beginning with `Random Speedrun #` will be deleted if they don't reach a bastion, otherwise they will stay in the saves folder and not get deleted. 
 
+<img width="529" height="334" alt="image" src="https://github.com/user-attachments/assets/fd69deef-3c43-4e37-9834-0516ced5a76f" />
+
+Note: World names that aren't listed here will NOT be deleted.
+
+Note: Some prefixes can NOT be removed or changed, and these worlds will NOT be cleared during wall screen due to leaderboard verification requirements (world you played in + 5 previous worlds).
