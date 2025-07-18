@@ -1,5 +1,5 @@
 # Jingle WorldBopper Plugin
-A Jingle plugin which keeps your saves folder under a certain size. This reduces disk space usage, and it helps MultiMC load instance settings faster (since it has fewer worlds to load).
+A Jingle plugin which clears certain worlds from your saves folder. This reduces disk space usage, and it helps the launcher load instance settings faster.
 
 ## Installation
 Download the latest version from the [Releases page](https://github.com/marin774/Jingle-Worldbopper-Plugin/releases). Drag and drop it into your Jingle plugins folder, and restart Jingle.
