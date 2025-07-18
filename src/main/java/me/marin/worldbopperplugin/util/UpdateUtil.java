@@ -116,34 +116,4 @@ public class UpdateUtil {
         GrabUtil.download(download, newJarPath, bar::setValue, 128);
     }
 
-    /**
-     * Imports settings.json, credentials.json and obs-overlay-template from Julti plugin (if these exist).
-     */
-    public static void importSettingsFromJulti() {
-        Path jultiWorldBopperPluginPath = Paths.get(System.getProperty("user.home")).resolve(".Julti").resolve("worldbopper-plugin");
-        if (jultiWorldBopperPluginPath.toFile().exists()) {
-            // Import existing Julti settings to prevent double setup
-            log(Level.INFO, "Importing Julti settings.");
-
-            boolean success = true;
-            Path settingsPath = jultiWorldBopperPluginPath.resolve("settings.json");
-            if (settingsPath.toFile().exists()) {
-                try {
-                    Files.copy(settingsPath, SETTINGS_PATH, StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException e) {
-                    success = false;
-                    log(Level.ERROR, "Error while trying to copy settings.json from Julti:\n" + ExceptionUtil.toDetailedString(e));
-                }
-            }
-
-            if (success) {
-                log(Level.INFO, "Imported Julti settings!");
-                JOptionPane.showMessageDialog(null, "WorldBopper has imported settings from Julti.", "WorldBopper - Imported from Julti", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                log(Level.INFO, "Couldn't import Julti settings.");
-                JOptionPane.showMessageDialog(null, "WorldBopper tried to import settings from Julti, but failed.\nCheck the logs for more information.", "WorldBopper - Failed to import", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
 }

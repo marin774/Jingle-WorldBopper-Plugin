@@ -2,6 +2,7 @@ package me.marin.worldbopperplugin.io;
 
 import me.marin.worldbopperplugin.WorldBopperPlugin;
 import me.marin.worldbopperplugin.util.FileStillEmptyException;
+import me.marin.worldbopperplugin.util.SpecialPrefix;
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
@@ -30,7 +31,6 @@ public class SavesFolderWatcher extends FileWatcher {
 
     public SavesFolderWatcher(Path path) {
         super("saves-folder-watcher", path.toFile());
-        log(Level.DEBUG, "Saves folder watcher is running...");
     }
 
     @Override
@@ -68,6 +68,12 @@ public class SavesFolderWatcher extends FileWatcher {
 
         if (worldsToKeepMap.getOrDefault(keepWorldInfo, new HashSet<>()).contains(worldName)) {
             return true;
+        }
+
+        SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(worldName);
+
+        if (specialPrefix != null) {
+            return !specialPrefix.canDelete(worldName);
         }
 
         WorldBopperSettings.KeepCondition keepCondition = keepWorldInfo.getCondition();
@@ -137,7 +143,7 @@ public class SavesFolderWatcher extends FileWatcher {
             }
         }
 
-        File[] directories = this.file.listFiles(File::isDirectory);
+        File[] directories = this.directory.listFiles(File::isDirectory);
         if (directories == null) {
             // IO error, clear next time I guess
             return 0;
@@ -152,9 +158,13 @@ public class SavesFolderWatcher extends FileWatcher {
                 .skip(numKeep)
                 .filter(f -> {
                     if (shouldKeepWorld(f)) {
-                        WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
+                        SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(f.getName());
 
-                        worldsToKeepMap.computeIfAbsent(keepWorldInfo, k -> new HashSet<>()).add(f.getName());
+                        if (specialPrefix == null) {
+                            WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
+
+                            worldsToKeepMap.computeIfAbsent(keepWorldInfo, k -> new HashSet<>()).add(f.getName());
+                        }
                         return false;
                     }
                     return true;

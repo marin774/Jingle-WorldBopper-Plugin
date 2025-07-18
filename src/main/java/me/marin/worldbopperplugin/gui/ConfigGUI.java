@@ -4,6 +4,7 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
+import me.marin.worldbopperplugin.io.FileWatcher;
 import me.marin.worldbopperplugin.io.InstanceManagerRunnable;
 import me.marin.worldbopperplugin.io.SavesFolderWatcher;
 import me.marin.worldbopperplugin.io.WorldBopperSettings;
@@ -51,8 +52,12 @@ public class ConfigGUI extends JPanel {
         clearWorldsNowButton.addActionListener(a -> {
             clearWorldsNowButton.setEnabled(false);
             AtomicInteger total = new AtomicInteger(0);
-            InstanceManagerRunnable.instanceWatcherMap.forEach((i, sfw) -> {
-                total.addAndGet(sfw.clearWorlds());
+            InstanceManagerRunnable.instanceWatchersMap.forEach((i, fws) -> {
+                for (FileWatcher fw : fws) {
+                    if (fw instanceof SavesFolderWatcher) { // ugly
+                        total.addAndGet(((SavesFolderWatcher) fw).clearWorlds());
+                    }
+                }
             });
             JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\n(New worlds will be bopped automatically)", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
             clearWorldsNowButton.setEnabled(true);
@@ -63,7 +68,7 @@ public class ConfigGUI extends JPanel {
         });
 
         addPrefixButton.addActionListener(a -> {
-            WorldBopperSettings.getInstance().worldsToKeep.add(new WorldBopperSettings.KeepWorldInfo("", WorldBopperSettings.KeepCondition.ALWAYS_DELETE));
+            WorldBopperSettings.getInstance().worldsToKeep.add(new WorldBopperSettings.KeepWorldInfo("", WorldBopperSettings.KeepCondition.ALWAYS_DELETE, false));
             WorldBopperSettings.save();
             updateGUI();
             invalidateCache();
@@ -109,6 +114,7 @@ public class ConfigGUI extends JPanel {
         int row = 1;
         for (WorldBopperSettings.KeepWorldInfo keepWorldInfo : WorldBopperSettings.getInstance().worldsToKeep) {
             JTextField field = new JTextField(keepWorldInfo.getPrefix());
+            field.setEnabled(!keepWorldInfo.isSpecial());
             field.getDocument().addDocumentListener(new DocumentListener() {
                 public void changedUpdate(DocumentEvent e) {
                     onChange();
@@ -140,6 +146,7 @@ public class ConfigGUI extends JPanel {
 
             JButton deletePrefix = new JButton();
             deletePrefix.setText("Remove prefix");
+            deletePrefix.setEnabled(!keepWorldInfo.isSpecial());
             deletePrefix.addActionListener(a -> {
                 int choice = JOptionPane.showConfirmDialog(null, "Are you sure you want to remove the prefix '" + keepWorldInfo.getPrefix() + "'?", "Remove prefix?", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
                 if (choice == JOptionPane.YES_OPTION) {
@@ -187,7 +194,13 @@ public class ConfigGUI extends JPanel {
 
     public void invalidateCache() {
         log(Level.DEBUG, "Invalidating cache...");
-        InstanceManagerRunnable.instanceWatcherMap.values().forEach(SavesFolderWatcher::invalidateCache);
+        InstanceManagerRunnable.instanceWatchersMap.values().forEach(fws -> {
+            fws.forEach(fw -> {
+                if (fw instanceof SavesFolderWatcher) { // ugly
+                    ((SavesFolderWatcher) fw).invalidateCache();
+                }
+            });
+        });
     }
 
     private static JComboBox<String> getConditionsComboBox() {

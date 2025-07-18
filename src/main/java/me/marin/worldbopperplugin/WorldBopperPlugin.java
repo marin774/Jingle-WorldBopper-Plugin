@@ -29,12 +29,7 @@ public class WorldBopperPlugin {
     public static void initialize() {
         log(Level.INFO, "Running WorldBopper Plugin v" + CURRENT_VERSION + "!");
 
-        boolean isFirstLaunch = !WORLD_BOPPER_FOLDER_PATH.toFile().exists();
         WORLD_BOPPER_FOLDER_PATH.toFile().mkdirs();
-
-        if (isFirstLaunch) {
-            UpdateUtil.importSettingsFromJulti();
-        }
 
         WorldBopperSettings.load();
         VersionUtil.Version version = version(WorldBopperSettings.getInstance().version);

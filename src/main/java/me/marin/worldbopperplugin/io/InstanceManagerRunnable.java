@@ -2,17 +2,13 @@ package me.marin.worldbopperplugin.io;
 
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.instance.InstanceChecker;
 import xyz.duncanruns.jingle.instance.OpenedInstanceInfo;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
@@ -25,7 +21,7 @@ import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
  */
 public class InstanceManagerRunnable implements Runnable {
 
-    public static final Map<String, SavesFolderWatcher> instanceWatcherMap = new HashMap<>();
+    public static final Map<String, List<FileWatcher>> instanceWatchersMap = new HashMap<>();
 
     private final HashSet<String> previousOpenInstancePaths = new HashSet<>();
 
@@ -34,7 +30,7 @@ public class InstanceManagerRunnable implements Runnable {
         try {
             doRun();
         } catch (Exception e) {
-            log(Level.DEBUG, "Error while tracking resets & wall time:\n" + ExceptionUtil.toDetailedString(e));
+            log(Level.DEBUG, "Error while tracking active instance:\n" + ExceptionUtil.toDetailedString(e));
         }
     }
 
@@ -49,24 +45,33 @@ public class InstanceManagerRunnable implements Runnable {
         closedInstancePaths.removeAll(currentOpenInstancePaths);
 
         for (String closedInstancePath : closedInstancePaths) {
-            if (instanceWatcherMap.containsKey(closedInstancePath)) {
+            if (instanceWatchersMap.containsKey(closedInstancePath)) {
                 // close old watchers (this instance was just closed)
-                instanceWatcherMap.get(closedInstancePath).stop();
-                instanceWatcherMap.remove(closedInstancePath);
-                log(Level.DEBUG, "Closed a FileWatcher for instance: " + closedInstancePath);
+                instanceWatchersMap.get(closedInstancePath).forEach(FileWatcher::stop);
+                instanceWatchersMap.remove(closedInstancePath);
+                log(Level.DEBUG, "Closed FileWatchers for instance: " + closedInstancePath);
             }
         }
 
         for (OpenedInstanceInfo instance : currentOpenInstances) {
             String path = instance.instancePath.toString();
-            if (!instanceWatcherMap.containsKey(path)) {
+            if (!instanceWatchersMap.containsKey(path)) {
                 Path savesPath = Paths.get(path, "saves");
+                Path atumDirectory = Paths.get(path, "config", "mcsr", "atum");
+                Path wpStateoutPath = Paths.get(path, "wpstateout.txt");
 
-                log(Level.DEBUG, "Starting a new FileWatcher for instance: " + path);
+                log(Level.DEBUG, "Starting FileWatchers for instance: " + path);
 
                 SavesFolderWatcher watcher = new SavesFolderWatcher(savesPath);
                 WorldBopperUtil.runAsync("saves-folder-watcher", watcher);
-                instanceWatcherMap.put(path, watcher);
+
+                StateWatcher stateWatcher = new StateWatcher(atumDirectory, wpStateoutPath);
+                WorldBopperUtil.runAsync("state-watcher", stateWatcher);
+
+                List<FileWatcher> watchers = new ArrayList<>();
+                watchers.add(watcher);
+                watchers.add(stateWatcher);
+                instanceWatchersMap.put(path, watchers);
             }
         }
 

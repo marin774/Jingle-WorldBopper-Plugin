@@ -1,5 +1,6 @@
 package me.marin.worldbopperplugin.io;
 
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
@@ -21,7 +22,10 @@ import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 @ToString
 public class WorldBopperSettings {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .registerTypeAdapter(new TypeToken<List<KeepWorldInfo>>(){}.getType(), new KeepWorldInfoListSerializer())
+            .create();
 
     @Getter
     private static WorldBopperSettings instance = null;
@@ -51,6 +55,7 @@ public class WorldBopperSettings {
         if (!Files.exists(SETTINGS_PATH)) {
             loadDefaultSettings();
             save();
+            load(); // force reload (because custom deserializer does some important stuff)
         } else {
             String s;
             try {
@@ -80,20 +85,23 @@ public class WorldBopperSettings {
 
     public static List<KeepWorldInfo> defaultKeepWorldInfo() {
         List<KeepWorldInfo> worldsToKeep = new ArrayList<>();
-        worldsToKeep.add(new KeepWorldInfo("Random Speedrun #", KeepCondition.NETHER));
-        worldsToKeep.add(new KeepWorldInfo("Benchmark Reset #", KeepCondition.ALWAYS_DELETE));
-        worldsToKeep.add(new KeepWorldInfo("New World", KeepCondition.COMPLETED));
+        // Special world prefixes are added in KeepWorldInfoListSerializer
+        worldsToKeep.add(new KeepWorldInfo("Benchmark Reset #", KeepCondition.ALWAYS_DELETE, false));
+        worldsToKeep.add(new KeepWorldInfo("New World", KeepCondition.ALWAYS_DELETE, false));
         return worldsToKeep;
     }
 
+    /**
+     * Serialized by {@link KeepWorldInfoListSerializer}
+     */
     @AllArgsConstructor @Getter @Setter @ToString @EqualsAndHashCode
     public static class KeepWorldInfo {
 
-        @SerializedName("world prefix")
         private String prefix;
 
-        @SerializedName("keep condition")
         private KeepCondition condition;
+
+        private boolean special;
 
     }
 
