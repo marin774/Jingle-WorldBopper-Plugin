@@ -1,7 +1,6 @@
 package me.marin.worldbopperplugin.io;
 
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.Jingle;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.io.File;
@@ -26,13 +25,20 @@ public abstract class FileWatcher implements Runnable {
     private static final int DUPLICATE_UPDATE_PREVENTION_MS = 5;
 
     protected final String name;
-    protected final File file;
+    protected final File directory;
+    protected String fileName = null;
 
     private WatchService watchService;
 
-    public FileWatcher(String name, File file) {
+    public FileWatcher(String name, File directory) {
         this.name = name;
-        this.file = file;
+        this.directory = directory;
+    }
+
+    public FileWatcher(String name, File directory, String fileName) {
+        this.name = name;
+        this.directory = directory;
+        this.fileName = fileName;
     }
 
     @Override
@@ -45,7 +51,7 @@ public abstract class FileWatcher implements Runnable {
         }
 
         try {
-            this.file.toPath().register(watchService, ENTRY_MODIFY, ENTRY_CREATE);
+            this.directory.toPath().register(watchService, ENTRY_MODIFY, ENTRY_CREATE);
 
             WatchKey watchKey;
             do {
@@ -61,7 +67,11 @@ public abstract class FileWatcher implements Runnable {
                         // sometimes event context is null? not sure how, but it happened.
                         continue;
                     }
-                    File updatedFile = new File(this.file, path.toString());
+                    File updatedFile = new File(this.directory, path.toString());
+                    if (this.fileName != null && !updatedFile.getName().equals(this.fileName)) {
+                        // ignore wrong file update
+                        continue;
+                    }
 
                     if (event.kind() == ENTRY_MODIFY) {
                         if (updatedFile.length() > 0) {
