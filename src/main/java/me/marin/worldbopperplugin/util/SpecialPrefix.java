@@ -61,10 +61,10 @@ public class SpecialPrefix {
     }
 
     public boolean canDelete(String worldName) {
-        return parseWorldName(worldName) <= safeDeleteUpTo;
+        return getWorldNumber(worldName) <= safeDeleteUpTo;
     }
 
-    private int parseWorldName(String worldName) {
+    private int getWorldNumber(String worldName) {
         try {
             return Integer.parseInt(worldName.replaceFirst("^"+prefix, ""));
         } catch (Exception e) {

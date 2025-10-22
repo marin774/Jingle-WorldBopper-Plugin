@@ -70,12 +70,6 @@ public class SavesFolderWatcher extends FileWatcher {
             return true;
         }
 
-        SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(worldName);
-
-        if (specialPrefix != null) {
-            return !specialPrefix.canDelete(worldName);
-        }
-
         WorldBopperSettings.KeepCondition keepCondition = keepWorldInfo.getCondition();
         if (keepCondition == WorldBopperSettings.KeepCondition.ALWAYS_DELETE) {
             return false;
@@ -158,16 +152,17 @@ public class SavesFolderWatcher extends FileWatcher {
                 .skip(numKeep)
                 .filter(f -> {
                     if (shouldKeepWorld(f)) {
-                        SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(f.getName());
+                        WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
 
-                        if (specialPrefix == null) {
-                            WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
-
-                            worldsToKeepMap.computeIfAbsent(keepWorldInfo, k -> new HashSet<>()).add(f.getName());
+                        boolean added = worldsToKeepMap.computeIfAbsent(keepWorldInfo, k -> new HashSet<>()).add(f.getName());
+                        if (added) {
+                            WorldBopperPlugin.log(Level.DEBUG, "Keeping world '" + f.getName() + "': '" + keepWorldInfo.getCondition().getDisplay() + "'");
                         }
+
                         return false;
                     }
-                    return true;
+                    SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(f.getName());
+                    return specialPrefix == null || specialPrefix.canDelete(f.getName()); // keep special prefix worlds if they can't be deleted yet
                 })
                 .forEach(f -> {
                     // Delete
