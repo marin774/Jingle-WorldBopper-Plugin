@@ -5,10 +5,15 @@ import me.marin.worldbopperplugin.util.FileStillEmptyException;
 import me.marin.worldbopperplugin.util.SpecialPrefix;
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
+import xyz.duncanruns.jingle.bopping.Bopping;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -186,10 +191,27 @@ public class WorldBopperTask implements Runnable {
                         return; // skip worlds that can't be deleted yet
                     }
 
+                    if (isSessionLocked(f)) {
+                        return; // skip locked worlds
+                    }
+
                     deleted.addAndGet(deleteDirectory(f) ? 1 : 0);
                 });
 
         return deleted.get();
+    }
+
+    private boolean isSessionLocked(File f) {
+        File sessionLockFile = new File(f, "session.lock");
+        try (RandomAccessFile raf = new RandomAccessFile(sessionLockFile, "rw");
+             FileChannel channel = raf.getChannel()) {
+
+            try (FileLock lock = channel.tryLock()) {
+                return lock == null;
+            }
+        } catch (IOException e) {
+            return true;
+        }
     }
 
     private boolean deleteDirectory(File f) {
