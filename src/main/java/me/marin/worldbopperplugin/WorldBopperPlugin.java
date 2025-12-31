@@ -37,7 +37,7 @@ public class WorldBopperPlugin {
             updateFrom(version);
         }
 
-        WorldBopperUtil.runTimerAsync(new InstanceManagerRunnable(), 1000);
+        WorldBopperUtil.runTimerAsync("instance-manager", new InstanceManagerRunnable(), 1000);
 
         VersionUtil.deleteOldVersionJars();
         UpdateUtil.checkForUpdatesAndUpdate(true);

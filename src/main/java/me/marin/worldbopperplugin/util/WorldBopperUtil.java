@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
@@ -19,9 +20,14 @@ public class WorldBopperUtil {
         new Thread(runnable, threadName).start();
     }
 
-    public static void runTimerAsync(Runnable runnable, int delayMs) {
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(runnable, 0, delayMs, TimeUnit.MILLISECONDS);
+    public static ScheduledFuture<?> runTimerAsync(String threadName, Runnable runnable, int delayMs) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, r -> {
+            Thread t = new Thread(r);
+            t.setName(threadName);
+            t.setDaemon(true);
+            return t;
+        });
+        return scheduler.scheduleAtFixedRate(runnable, 0, delayMs, TimeUnit.MILLISECONDS);
     }
 
     /**
