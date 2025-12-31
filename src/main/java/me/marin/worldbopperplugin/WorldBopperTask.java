@@ -62,7 +62,7 @@ public class WorldBopperTask implements Runnable {
 
         int before = totalBopped.get() / CLEARED_WORLDS_LOG_INTERVAL;
 
-        totalBopped.addAndGet(clearWorlds());
+        totalBopped.addAndGet(clearWorlds(false));
 
         int after = totalBopped.get() / CLEARED_WORLDS_LOG_INTERVAL;
         if (after > before) {
@@ -140,7 +140,7 @@ public class WorldBopperTask implements Runnable {
         }
     }
 
-    public synchronized int clearWorlds() {
+    public synchronized int clearWorlds(boolean ignoreKeepLatest) {
         File[] directories = this.savesDirectory.listFiles(File::isDirectory);
         if (directories == null) {
             // IO error, clear next time I guess
@@ -156,15 +156,17 @@ public class WorldBopperTask implements Runnable {
 
         // Determine which world names to keep per-prefix (keepLatest)
         Set<String> keepLatestWorlds = ConcurrentHashMap.newKeySet();
-        grouped.entrySet().parallelStream().forEach(entry -> {
-            WorldBopperSettings.KeepWorldInfo keepInfo = entry.getKey();
-            List<File> list = entry.getValue();
-            list.sort(Comparator.comparingLong(File::lastModified).reversed());
-            // Keep first 'keepLatest' worlds
-            for (int i = 0; i < Math.min(keepInfo.getKeepLatest(), list.size()); i++) {
-                keepLatestWorlds.add(list.get(i).getName());
-            }
-        });
+        if (!ignoreKeepLatest) {
+            grouped.entrySet().parallelStream().forEach(entry -> {
+                WorldBopperSettings.KeepWorldInfo keepInfo = entry.getKey();
+                List<File> list = entry.getValue();
+                list.sort(Comparator.comparingLong(File::lastModified).reversed());
+                // Keep first 'keepLatest' worlds
+                for (int i = 0; i < Math.min(keepInfo.getKeepLatest(), list.size()); i++) {
+                    keepLatestWorlds.add(list.get(i).getName());
+                }
+            });
+        }
 
         Arrays.stream(directories)
                 .parallel()

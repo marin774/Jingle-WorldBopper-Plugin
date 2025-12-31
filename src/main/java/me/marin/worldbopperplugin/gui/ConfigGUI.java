@@ -28,7 +28,7 @@ public class ConfigGUI extends JPanel {
     private JButton addPrefixButton;
     private JLabel noPrefixesText;
     private JPanel prefixesPanel;
-    private JButton clearWorldsNowButton;
+    private JButton clearBoppableWorldsButton;
     private JPanel boppableWorldsPanel;
 
     private final GridBagConstraints gbc = new GridBagConstraints();
@@ -47,14 +47,14 @@ public class ConfigGUI extends JPanel {
             updateGUI();
         });
 
-        clearWorldsNowButton.addActionListener(a -> {
-            clearWorldsNowButton.setEnabled(false);
+        clearBoppableWorldsButton.addActionListener(a -> {
+            clearBoppableWorldsButton.setEnabled(false);
             AtomicInteger total = new AtomicInteger(0);
             InstanceManagerRunnable.instanceWatchersMap.forEach((i, pair) -> {
-                total.addAndGet(pair.getLeft().clearWorlds());
+                total.addAndGet(pair.getLeft().clearWorlds(true));
             });
-            JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\n(New worlds will be bopped automatically)", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
-            clearWorldsNowButton.setEnabled(true);
+            JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\nNew worlds will be bopped automatically every 5 seconds,\nafter bopping conditions are met.", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
+            clearBoppableWorldsButton.setEnabled(true);
         });
 
         checkForUpdatesButton.addActionListener(a -> {
@@ -275,9 +275,10 @@ public class ConfigGUI extends JPanel {
         addPrefixButton.setActionCommand("Add prefix");
         addPrefixButton.setText("Add new prefix");
         panel1.add(addPrefixButton, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        clearWorldsNowButton = new JButton();
-        clearWorldsNowButton.setText("Clear worlds now");
-        panel1.add(clearWorldsNowButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        clearBoppableWorldsButton = new JButton();
+        clearBoppableWorldsButton.setEnabled(true);
+        clearBoppableWorldsButton.setText("Clear all boppable worlds now");
+        panel1.add(clearBoppableWorldsButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer2 = new Spacer();
         panel1.add(spacer2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
