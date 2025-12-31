@@ -17,7 +17,7 @@ public class SpecialPrefix {
         // Neither demo nor set speedruns use the wall, so they're not included for now.
         // prefixes.put("Demo Speedrun #", new SpecialPrefix("demo-attempts.txt", WorldBopperSettings.KeepCondition.END));
         // prefixes.put("Set Speedrun #", new SpecialPrefix("ssg-attempts.txt", WorldBopperSettings.KeepCondition.END));
-        prefixes.put("Random Speedrun #", new SpecialPrefix("Random Speedrun #", "rsg-attempts.txt", WorldBopperSettings.KeepCondition.NETHER));
+        prefixes.put("Random Speedrun #", new SpecialPrefix("Random Speedrun #", "rsg-attempts.txt", 100, WorldBopperSettings.KeepCondition.NETHER));
 
         ALL_PREFIXES = Collections.unmodifiableMap(prefixes);
     }
@@ -30,6 +30,9 @@ public class SpecialPrefix {
     @Getter
     private final WorldBopperSettings.KeepCondition defaultKeepCondition;
 
+    @Getter
+    private final int keepLatest;
+
     /**
      * Highest world number (that's found at the end of the world name) that is safe to be deleted.
      * Leaderboard verification requires 5 previously generated worlds, but if you reset on the wall a lot (without
@@ -38,10 +41,11 @@ public class SpecialPrefix {
     @Setter @Getter
     private volatile int safeDeleteUpTo = 0;
 
-    public SpecialPrefix(String prefix, String fileName, WorldBopperSettings.KeepCondition defaultKeepCondition) {
+    public SpecialPrefix(String prefix, String fileName, int keepLatest, WorldBopperSettings.KeepCondition defaultKeepCondition) {
         this.prefix = prefix;
         this.fileName = fileName;
         this.defaultKeepCondition = defaultKeepCondition;
+        this.keepLatest = keepLatest;
     }
 
     public static SpecialPrefix getSpecialPrefix(String str) {

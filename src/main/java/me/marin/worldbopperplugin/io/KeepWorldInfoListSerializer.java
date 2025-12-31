@@ -15,6 +15,7 @@ public class KeepWorldInfoListSerializer implements JsonSerializer<List<WorldBop
 
     private static final String WORLD_PREFIX = "world prefix";
     private static final String KEEP_CONDITION = "keep condition";
+    private static final String KEEP_LATEST = "keep lastest";
 
     @Override
     public JsonElement serialize(List<WorldBopperSettings.KeepWorldInfo> keepWorldInfos, Type type, JsonSerializationContext context) {
@@ -24,6 +25,7 @@ public class KeepWorldInfoListSerializer implements JsonSerializer<List<WorldBop
             JsonObject obj = new JsonObject();
             obj.addProperty(WORLD_PREFIX, keepWorldInfo.getPrefix());
             obj.add(KEEP_CONDITION, context.serialize(keepWorldInfo.getCondition()));
+            obj.addProperty(KEEP_LATEST, keepWorldInfo.getKeepLatest());
 
             array.add(obj);
         }
@@ -43,18 +45,19 @@ public class KeepWorldInfoListSerializer implements JsonSerializer<List<WorldBop
             JsonObject obj = element.getAsJsonObject();
 
             String prefix = obj.get(WORLD_PREFIX).getAsString();
+            int keepLatest = obj.get(KEEP_LATEST) != null ? obj.get(KEEP_LATEST).getAsInt() : 5;
             WorldBopperSettings.KeepCondition condition = context.deserialize(obj.get(KEEP_CONDITION), WorldBopperSettings.KeepCondition.class);
             if (SpecialPrefix.isSpecialPrefixExact(prefix)) {
                 specialPrefixesCondition.put(prefix, condition);
             } else {
-                list.add(new WorldBopperSettings.KeepWorldInfo(prefix, condition, false));
+                list.add(new WorldBopperSettings.KeepWorldInfo(prefix, condition, keepLatest,false));
             }
         }
 
         WorldBopperPlugin.log(Level.DEBUG, "Adding special prefixes to the start...");
 
         SpecialPrefix.ALL_PREFIXES.forEach((k, v) -> {
-            list.add(0, new WorldBopperSettings.KeepWorldInfo(k, specialPrefixesCondition.getOrDefault(k, v.getDefaultKeepCondition()), true));
+            list.add(0, new WorldBopperSettings.KeepWorldInfo(k, specialPrefixesCondition.getOrDefault(k, v.getDefaultKeepCondition()), v.getKeepLatest(), true));
         });
 
         return list;

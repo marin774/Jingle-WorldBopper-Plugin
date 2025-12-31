@@ -4,9 +4,7 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
-import me.marin.worldbopperplugin.io.FileWatcher;
 import me.marin.worldbopperplugin.io.InstanceManagerRunnable;
-import me.marin.worldbopperplugin.io.SavesFolderWatcher;
 import me.marin.worldbopperplugin.io.WorldBopperSettings;
 import me.marin.worldbopperplugin.util.UpdateUtil;
 import org.apache.logging.log4j.Level;
@@ -52,12 +50,8 @@ public class ConfigGUI extends JPanel {
         clearWorldsNowButton.addActionListener(a -> {
             clearWorldsNowButton.setEnabled(false);
             AtomicInteger total = new AtomicInteger(0);
-            InstanceManagerRunnable.instanceWatchersMap.forEach((i, fws) -> {
-                for (FileWatcher fw : fws) {
-                    if (fw instanceof SavesFolderWatcher) { // ugly
-                        total.addAndGet(((SavesFolderWatcher) fw).clearWorlds());
-                    }
-                }
+            InstanceManagerRunnable.instanceWatchersMap.forEach((i, pair) -> {
+                total.addAndGet(pair.getLeft().clearWorlds());
             });
             JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\n(New worlds will be bopped automatically)", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
             clearWorldsNowButton.setEnabled(true);
@@ -68,7 +62,7 @@ public class ConfigGUI extends JPanel {
         });
 
         addPrefixButton.addActionListener(a -> {
-            WorldBopperSettings.getInstance().worldsToKeep.add(new WorldBopperSettings.KeepWorldInfo("", WorldBopperSettings.KeepCondition.ALWAYS_DELETE, false));
+            WorldBopperSettings.getInstance().worldsToKeep.add(new WorldBopperSettings.KeepWorldInfo("", WorldBopperSettings.KeepCondition.ALWAYS_DELETE, 5, false));
             WorldBopperSettings.save();
             updateGUI();
             invalidateCache();
@@ -77,7 +71,7 @@ public class ConfigGUI extends JPanel {
 
     private void createUIComponents() {
         GridBagLayout gbl = new GridBagLayout();
-        gbl.columnWidths = new int[]{150, -1, -1, -1};
+        gbl.columnWidths = new int[]{150, -1, 60, -1};
         prefixesPanel = new JPanel(gbl);
     }
 
@@ -108,6 +102,13 @@ public class ConfigGUI extends JPanel {
             gbc.gridx = 2;
             gbc.gridy = 0;
             gbc.weightx = 30;
+            JLabel label3 = new JLabel("Keep latest:");
+            label3.setHorizontalAlignment(JLabel.LEFT);
+            prefixesPanel.add(label3, gbc);
+
+            gbc.gridx = 3;
+            gbc.gridy = 0;
+            gbc.weightx = 10;
             Component box = Box.createRigidArea(new Dimension(0, 0));
             prefixesPanel.add(box, gbc);
         }
@@ -157,6 +158,18 @@ public class ConfigGUI extends JPanel {
                 }
             });
 
+            SpinnerNumberModel spinnerModel = new SpinnerNumberModel(Math.max(1, keepWorldInfo.getKeepLatest()), 1, 1000, 1);
+            JSpinner keepLatestSpinner = new JSpinner(spinnerModel);
+            JSpinner.NumberEditor editor = new JSpinner.NumberEditor(keepLatestSpinner, "#");
+            keepLatestSpinner.setEditor(editor);
+            keepLatestSpinner.setEnabled(!keepWorldInfo.isSpecial());
+            keepLatestSpinner.addChangeListener(e -> {
+                int val = (Integer) keepLatestSpinner.getValue();
+                keepWorldInfo.setKeepLatest(val);
+                WorldBopperSettings.save();
+                invalidateCache();
+            });
+
             // Prefix text field
             gbc.gridx = 0;
             gbc.gridy = row;
@@ -174,10 +187,18 @@ public class ConfigGUI extends JPanel {
             gbc.insets = new Insets(5, 5, 0, 0);
             prefixesPanel.add(keepConditionComboBox, gbc);
 
-            // Remove prefix button
+            // Keep latest spinner
             gbc.gridx = 2;
             gbc.gridy = row;
             gbc.weightx = 30;
+            gbc.ipadx = 0;
+            gbc.insets = new Insets(5, 5, 0, 0);
+            prefixesPanel.add(keepLatestSpinner, gbc);
+
+            // Remove prefix button
+            gbc.gridx = 3;
+            gbc.gridy = row;
+            gbc.weightx = 10;
             gbc.ipadx = 0;
             gbc.insets = new Insets(5, 5, 0, 1);
             prefixesPanel.add(deletePrefix, gbc);
@@ -194,13 +215,7 @@ public class ConfigGUI extends JPanel {
 
     public void invalidateCache() {
         log(Level.DEBUG, "Invalidating cache...");
-        InstanceManagerRunnable.instanceWatchersMap.values().forEach(fws -> {
-            fws.forEach(fw -> {
-                if (fw instanceof SavesFolderWatcher) { // ugly
-                    ((SavesFolderWatcher) fw).invalidateCache();
-                }
-            });
-        });
+        InstanceManagerRunnable.instanceWatchersMap.values().forEach(pair -> pair.getLeft().invalidateCache());
     }
 
     private static JComboBox<String> getConditionsComboBox() {

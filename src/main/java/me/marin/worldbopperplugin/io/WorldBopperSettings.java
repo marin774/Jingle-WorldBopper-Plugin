@@ -86,8 +86,8 @@ public class WorldBopperSettings {
     public static List<KeepWorldInfo> defaultKeepWorldInfo() {
         List<KeepWorldInfo> worldsToKeep = new ArrayList<>();
         // Special world prefixes are added in KeepWorldInfoListSerializer
-        worldsToKeep.add(new KeepWorldInfo("Benchmark Reset #", KeepCondition.ALWAYS_DELETE, false));
-        worldsToKeep.add(new KeepWorldInfo("New World", KeepCondition.ALWAYS_DELETE, false));
+        worldsToKeep.add(new KeepWorldInfo("Benchmark Reset #", KeepCondition.ALWAYS_DELETE, 1,false));
+        worldsToKeep.add(new KeepWorldInfo("New World", KeepCondition.ALWAYS_DELETE, 5,false));
         return worldsToKeep;
     }
 
@@ -100,6 +100,8 @@ public class WorldBopperSettings {
         private String prefix;
 
         private KeepCondition condition;
+
+        private int keepLatest;
 
         private boolean special;
 
