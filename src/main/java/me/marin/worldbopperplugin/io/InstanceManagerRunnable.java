@@ -5,12 +5,15 @@ import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
 import xyz.duncanruns.jingle.instance.InstanceChecker;
-import xyz.duncanruns.jingle.instance.OpenedInstanceInfo;
+import xyz.duncanruns.jingle.instance.InstanceInfo;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
@@ -31,7 +34,7 @@ public class InstanceManagerRunnable implements Runnable {
     }
 
     public void doRun() {
-        Set<OpenedInstanceInfo> currentOpenInstances = InstanceChecker.getAllOpenedInstances();
+        Set<InstanceInfo> currentOpenInstances = new HashSet<>(InstanceChecker.getAllOpenedInstances());
 
         Set<String> currentOpenInstancePaths = currentOpenInstances.stream()
                 .map(i -> i.instancePath.toString())
@@ -51,7 +54,7 @@ public class InstanceManagerRunnable implements Runnable {
             }
         }
 
-        for (OpenedInstanceInfo instance : currentOpenInstances) {
+        for (InstanceInfo instance : currentOpenInstances) {
             String path = instance.instancePath.toString();
             if (!instanceWatchersMap.containsKey(path)) {
                 Path savesPath = Paths.get(path, "saves");
