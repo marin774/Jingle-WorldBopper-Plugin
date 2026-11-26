@@ -2,10 +2,8 @@ package me.marin.worldbopperplugin;
 
 import me.marin.worldbopperplugin.io.WorldBopperSettings;
 import me.marin.worldbopperplugin.util.FileStillEmptyException;
-import me.marin.worldbopperplugin.util.SpecialPrefix;
 import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
-import xyz.duncanruns.jingle.bopping.Bopping;
 import xyz.duncanruns.jingle.util.ExceptionUtil;
 
 import java.io.File;
@@ -33,6 +31,7 @@ public class WorldBopperTask implements Runnable {
 
     private static final int INTERVAL_SECONDS = 5;
     private static final int CLEARED_WORLDS_LOG_INTERVAL = 250;
+    private static final int VERIFICATION_PREVIOUS_WORLDS = 5;
 
     private ScheduledFuture<?> service;
 
@@ -148,7 +147,7 @@ public class WorldBopperTask implements Runnable {
     public synchronized int clearWorlds(boolean ignoreKeepLatest) {
         File[] directories = this.savesDirectory.listFiles(File::isDirectory);
         if (directories == null) {
-            // IO error, clear next time I guess
+            // IO error, clear next time
             return 0;
         }
 
@@ -173,9 +172,16 @@ public class WorldBopperTask implements Runnable {
             });
         }
 
+        Set<String> verificationWorlds = Arrays.stream(directories)
+                .filter(d -> new File(d, "level.dat").isFile())
+                .sorted(Comparator.comparingLong((File d) -> new File(d, "level.dat").lastModified()).reversed())
+                .limit(VERIFICATION_PREVIOUS_WORLDS + 1)
+                .map(File::getName)
+                .collect(Collectors.toSet());
+
         Arrays.stream(directories)
                 .parallel()
-                .filter(d -> !keepLatestWorlds.contains(d.getName()) && isValidDirectoryName(d.getName()))
+                .filter(d -> !keepLatestWorlds.contains(d.getName()) && !verificationWorlds.contains(d.getName()) && isValidDirectoryName(d.getName()))
                 .forEach(f -> {
                     if (shouldKeepWorld(f)) {
                         WorldBopperSettings.KeepWorldInfo keepWorldInfo = WorldBopperSettings.getInstance().getKeepWorldInfo(f.getName());
@@ -184,11 +190,6 @@ public class WorldBopperTask implements Runnable {
                             WorldBopperPlugin.log(Level.DEBUG, "Keeping world '" + f.getName() + "', from prefix '" + keepWorldInfo.getPrefix() + "': '" + keepWorldInfo.getCondition().getDisplay() + "'");
                         }
                         return;
-                    }
-
-                    SpecialPrefix specialPrefix = SpecialPrefix.getSpecialPrefix(f.getName());
-                    if (specialPrefix != null && !specialPrefix.canDelete(f.getName())) {
-                        return; // skip worlds that can't be deleted yet
                     }
 
                     if (isSessionLocked(f)) {
@@ -203,6 +204,11 @@ public class WorldBopperTask implements Runnable {
 
     private boolean isSessionLocked(File f) {
         File sessionLockFile = new File(f, "session.lock");
+
+        if (!sessionLockFile.exists()) {
+            return false;
+        }
+
         try (RandomAccessFile raf = new RandomAccessFile(sessionLockFile, "rw");
              FileChannel channel = raf.getChannel()) {
 

@@ -23,4 +23,5 @@ You can now configure the plugin.
 
 Note: World names that aren't listed here will NOT be deleted (i.e. practice maps).
 
-Note: Some prefixes can NOT be removed or changed, and these worlds will NOT be cleared during wall screen due to leaderboard verification requirements (world you played in + 5 previous worlds).
+Note: Some prefixes can NOT be removed or changed. This was done to meet leaderboard verification requirements (world you played in + 5 previous worlds). The 6 most recently saved worlds (the world you're playing + 5 previous worlds) are never deleted, and neither are worlds that are currently open or queued in SeedQueue.
+It is recommended to use Jingle's "Clear Worlds" button if you play a lot of random seeds, since kept worlds will pile up with time.

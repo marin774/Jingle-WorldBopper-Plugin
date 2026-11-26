@@ -1,8 +1,6 @@
 package me.marin.worldbopperplugin.io;
 
 import me.marin.worldbopperplugin.WorldBopperTask;
-import me.marin.worldbopperplugin.util.WorldBopperUtil;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Level;
 import xyz.duncanruns.jingle.instance.InstanceChecker;
 import xyz.duncanruns.jingle.instance.InstanceInfo;
@@ -20,7 +18,7 @@ import static me.marin.worldbopperplugin.WorldBopperPlugin.log;
 
 public class InstanceManagerRunnable implements Runnable {
 
-    public static final Map<String, Pair<WorldBopperTask, StateWatcher>> instanceWatchersMap = new HashMap<>();
+    public static final Map<String, WorldBopperTask> instanceWatchersMap = new HashMap<>();
 
     private final HashSet<String> previousOpenInstancePaths = new HashSet<>();
 
@@ -46,11 +44,9 @@ public class InstanceManagerRunnable implements Runnable {
         for (String closedInstancePath : closedInstancePaths) {
             if (instanceWatchersMap.containsKey(closedInstancePath)) {
                 // close old watchers (this instance was just closed)
-                instanceWatchersMap.get(closedInstancePath).getLeft().stop();
-                instanceWatchersMap.get(closedInstancePath).getRight().stop();
-                instanceWatchersMap.remove(closedInstancePath);
+                instanceWatchersMap.remove(closedInstancePath).stop();
 
-                log(Level.DEBUG, "Closed FileWatchers for instance: " + closedInstancePath);
+                log(Level.DEBUG, "Stopped WorldBopper for instance: " + closedInstancePath);
             }
         }
 
@@ -58,18 +54,13 @@ public class InstanceManagerRunnable implements Runnable {
             String path = instance.instancePath.toString();
             if (!instanceWatchersMap.containsKey(path)) {
                 Path savesPath = Paths.get(path, "saves");
-                Path atumDirectory = Paths.get(path, "config", "mcsr", "atum");
-                Path wpStateoutPath = Paths.get(path, "wpstateout.txt");
 
-                log(Level.DEBUG, "Starting FileWatchers for instance: " + path);
+                log(Level.DEBUG, "Starting WorldBopper for instance: " + path);
 
                 WorldBopperTask worldBopperTask = new WorldBopperTask(savesPath);
                 worldBopperTask.start();
 
-                StateWatcher stateWatcher = new StateWatcher(atumDirectory, wpStateoutPath);
-                WorldBopperUtil.runAsync("state-watcher", stateWatcher);
-
-                instanceWatchersMap.put(path, Pair.of(worldBopperTask, stateWatcher));
+                instanceWatchersMap.put(path, worldBopperTask);
             }
         }
 

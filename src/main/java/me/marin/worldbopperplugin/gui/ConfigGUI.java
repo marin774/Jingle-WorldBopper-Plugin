@@ -4,9 +4,11 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import lombok.Getter;
+import me.marin.worldbopperplugin.WorldBopperTask;
 import me.marin.worldbopperplugin.io.InstanceManagerRunnable;
 import me.marin.worldbopperplugin.io.WorldBopperSettings;
 import me.marin.worldbopperplugin.util.UpdateUtil;
+import me.marin.worldbopperplugin.util.WorldBopperUtil;
 import org.apache.logging.log4j.Level;
 
 import javax.swing.*;
@@ -49,12 +51,14 @@ public class ConfigGUI extends JPanel {
 
         clearBoppableWorldsButton.addActionListener(a -> {
             clearBoppableWorldsButton.setEnabled(false);
-            AtomicInteger total = new AtomicInteger(0);
-            InstanceManagerRunnable.instanceWatchersMap.forEach((i, pair) -> {
-                total.addAndGet(pair.getLeft().clearWorlds(true));
+            WorldBopperUtil.runAsync("clear-boppable-worlds", () -> {
+                AtomicInteger total = new AtomicInteger(0);
+                InstanceManagerRunnable.instanceWatchersMap.forEach((i, task) -> {
+                    total.addAndGet(task.clearWorlds(true));
+                });
+                JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\nNew worlds will be bopped automatically every 5 seconds,\nafter bopping conditions are met.", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
+                clearBoppableWorldsButton.setEnabled(true);
             });
-            JOptionPane.showMessageDialog(null, String.format("Cleared %d worlds.\nNew worlds will be bopped automatically every 5 seconds,\nafter bopping conditions are met.", total.get()), "Cleared Worlds", JOptionPane.INFORMATION_MESSAGE);
-            clearBoppableWorldsButton.setEnabled(true);
         });
 
         checkForUpdatesButton.addActionListener(a -> {
@@ -215,7 +219,7 @@ public class ConfigGUI extends JPanel {
 
     public void invalidateCache() {
         log(Level.DEBUG, "Invalidating cache...");
-        InstanceManagerRunnable.instanceWatchersMap.values().forEach(pair -> pair.getLeft().invalidateCache());
+        InstanceManagerRunnable.instanceWatchersMap.values().forEach(WorldBopperTask::invalidateCache);
     }
 
     private static JComboBox<String> getConditionsComboBox() {
